@@ -36,10 +36,10 @@ async function getPayheroSettings(company_id) {
 }
 
 // Function to initiate a payment request
-async function initiatePayment(client, settings) {
+async function initiatePayment(client, settings, phone_number) {
     const paymentData = {
         amount: Number(client.plan_fee) + Number(client.installation_fee),
-        phone_number: client.phone_number,
+        phone_number: phone_number,
         channel_id: settings.channel_id,
         provider: "m-pesa",
         external_reference: "INV-009",

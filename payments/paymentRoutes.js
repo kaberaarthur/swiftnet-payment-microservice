@@ -6,7 +6,7 @@ const router = express.Router();
 // Define a POST endpoint to fetch client details
 router.post('/payment', async (req, res) => {
     try {
-        const { client_id } = req.body;
+        const { client_id, phone_number } = req.body;
 
         if (!client_id) {
             return res.status(400).json({ error: "Missing client_id" });
@@ -24,11 +24,9 @@ router.post('/payment', async (req, res) => {
             return res.status(404).json({ error: "PayHero settings not found" });
         }
 
-        const paymentResponse = await initiatePayment(client, settings);
-        // console.log("Payment Response: ", paymentResponse)
+        const paymentResponse = await initiatePayment(client, settings, phone_number);
 
         const paymentRequestStoreResponse = await storePaymentRequest(client, paymentResponse);
-        // console.log("Payment Response: ", paymentRequestStoreResponse)
 
         res.status(200).json({ client_details: client, response: paymentRequestStoreResponse });
     } catch (error) {

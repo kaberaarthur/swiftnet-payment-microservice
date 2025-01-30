@@ -58,9 +58,9 @@ wss.on('connection', (ws) => {
             if (result) {
                 found = true;
                 // Run a Function to Confirm Payment Here
-                confirmPayment(clientID, result.MpesaReceiptNumber)
+                const updatedEndDate = await confirmPayment(clientID, result.MpesaReceiptNumber);
 
-                ws.send(JSON.stringify({ status: "found", data: result })); // Send data to frontend
+                ws.send(JSON.stringify({ status: "found", data: result, end_date: updatedEndDate })); // Send data to frontend
                 return; // Stop further checks
             }
 

@@ -46,6 +46,8 @@ async function confirmPayment(client_id, MpesaReceiptNumber) {
         );
         console.log(`Updated pppoe_payments (end_date) for payment ID: ${payment.id}, company_id: ${client.company_id}`);
 
+        return newEndDate; // Return the new end date
+
     } catch (error) {
         console.error('Error confirming payment:', error);
     }

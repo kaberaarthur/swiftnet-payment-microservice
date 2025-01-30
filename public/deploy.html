@@ -14,6 +14,22 @@
     <div id="root"></div>
 
     <script type="text/babel">
+        function formatFriendlyDate(isoDate) {
+            const date = new Date(isoDate);
+
+            const options = {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: true, // Use 12-hour format with AM/PM
+            };
+
+            return date.toLocaleString('en-US', options);
+        }
+
         let socket;
 
         function watchTransaction(CheckoutRequestID, clientID) {
@@ -31,6 +47,7 @@
                 const response = JSON.parse(event.data);
                 if (response.status === "found") {
                     document.getElementById('result').innerText = "Transaction found: " + JSON.stringify(response.data.MpesaReceiptNumber);
+                    document.getElementById('end_date').innerText = "New Expiry Date: " + JSON.stringify(formatFriendlyDate(response.end_date));
                     socket.close();
                 } else if (response.status === "not_found") {
                     document.getElementById('result').innerText = "No record found within 3 minutes.";
@@ -57,7 +74,8 @@
                             'Content-Type': 'application/json',
                         },
                         body: JSON.stringify({
-                            client_id: clientID,  // Sending clientID as JSON
+                            client_id: clientID,
+                            phone_number: "0790485731"
                         }),
                     });
 
@@ -99,6 +117,7 @@
                         
                     </form>
                     <p id="result" className="text-xl font-semibold text-gray-900"></p>
+                    <p id="end_date" className="text-xl font-semibold text-gray-900"></p>
                 </div>
             );
         }
