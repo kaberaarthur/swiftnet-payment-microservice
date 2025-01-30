@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <title>WebSocket Example</title>
+</head>
+<body>
+    <input type="text" id="checkoutRequestID" placeholder="Enter CheckoutRequestID">
+    <button onclick="watchTransaction()">Watch</button>
+    <div id="result"></div>
+
+    <script>
+        let socket;
+
+        function watchTransaction() {
+            const CheckoutRequestID = document.getElementById('checkoutRequestID').value;
+            document.getElementById('result').innerText = "Waiting for transaction...";
+
+            socket = new WebSocket('ws://localhost:3000');
+
+            socket.onopen = () => {
+                console.log("Connected to WebSocket");
+                socket.send(JSON.stringify({ CheckoutRequestID }));
+            };
+
+            socket.onmessage = (event) => {
+                const response = JSON.parse(event.data);
+                if (response.status === "found") {
+                    document.getElementById('result').innerText = "Transaction found: " + JSON.stringify(response.data);
+                    socket.close();
+                } else if (response.status === "not_found") {
+                    document.getElementById('result').innerText = "No record found within 3 minutes.";
+                }
+            };
+
+            socket.onclose = () => console.log("WebSocket connection closed.");
+        }
+    </script>
+</body>
+</html>

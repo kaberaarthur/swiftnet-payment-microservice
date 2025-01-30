@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <title>Client ID Form</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@17/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js" crossorigin></script>
+    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+</head>
+<body class="flex items-center justify-center h-screen bg-gray-100">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        let socket;
+
+        function watchTransaction(CheckoutRequestID, clientID) {
+            // const CheckoutRequestID = document.getElementById('checkoutRequestID').value;
+            document.getElementById('result').innerText = "Waiting for transaction...";
+
+            socket = new WebSocket('ws://localhost:3000');
+
+            socket.onopen = () => {
+                console.log("Connected to WebSocket");
+                socket.send(JSON.stringify({ CheckoutRequestID, clientID }));
+            };
+
+            socket.onmessage = (event) => {
+                const response = JSON.parse(event.data);
+                if (response.status === "found") {
+                    document.getElementById('result').innerText = "Transaction found: " + JSON.stringify(response.data.MpesaReceiptNumber);
+                    socket.close();
+                } else if (response.status === "not_found") {
+                    document.getElementById('result').innerText = "No record found within 3 minutes.";
+                }
+            };
+
+            socket.onclose = () => console.log("WebSocket connection closed.");
+        }
+
+        function ClientIDForm() {
+            const [clientID, setClientID] = React.useState(2);
+
+            const handleSubmit = async (event) => {
+                event.preventDefault();
+                console.log('Client ID:', clientID);
+
+                // Define the endpoint you want to send the request to
+                const endpoint = 'http://localhost:3000/api/payment';
+
+                try {
+                    const response = await fetch(endpoint, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            client_id: clientID,  // Sending clientID as JSON
+                        }),
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        // console.log('Response data:', data);
+
+                        // Initiate the WS Request Here
+                        if (clientID) {
+                            watchTransaction(data.response.CheckoutRequestID, clientID);
+                            // console.log("The Client ID: ", clientID)
+                        } else {
+                            console.log("Client ID is Undefined");
+                        }
+                        
+                    } else {
+                        console.error('Error:', response.statusText);
+                    }
+                } catch (error) {
+                    console.error('Request failed', error);
+                }
+            };
+
+            return (
+                <div className="bg-white p-6 rounded-lg shadow-lg w-96">
+                    <h2 className="text-xl font-semibold mb-4">Enter Your Client ID</h2>
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                        <input 
+                            type="text" 
+                            value={clientID}
+                            onChange={(e) => setClientID(e.target.value)}
+                            className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="Enter client ID"
+                        />
+                        <button 
+                            type="submit" 
+                            className="w-full bg-blue-500 text-white p-2 rounded-lg hover:bg-blue-600"
+                        >Submit</button>
+                        
+                    </form>
+                    <p id="result" className="text-xl font-semibold text-gray-900"></p>
+                </div>
+            );
+        }
+
+        ReactDOM.render(<ClientIDForm />, document.getElementById('root'));
+    </script>
+</body>
+</html>
