@@ -1,17 +1,28 @@
 const express = require('express');
+const cors = require('cors');
 const WebSocket = require('ws');
 const favicon = require('serve-favicon');
 const pool = require('./db'); // MySQL connection setup
 const { confirmPayment } = require('./confirmPayment/functions'); 
+const { getRouterDetails, executeSSHCommand, deleteActiveConnection, changePppoePlan } = require('./mikrotik/functions'); 
+
+const { Client } = require('ssh2');
+const bodyParser = require('body-parser');
 
 const app = express();
-const server = app.listen(3000, () => console.log('Server running on port 3000'));
+const server = app.listen(3001, () => console.log('Server running on port 3001'));
 const wss = new WebSocket.Server({ server });
 
 // External Endpoints
 const paymentRoutes = require('./payments/paymentRoutes');
 
 const path = require('path');
+
+// Middleware to parse JSON
+app.use(bodyParser.json());
+
+// Allow all origins
+app.use(cors({ origin: '*', methods: ['GET', 'POST'] }));
 
 // Serve the favicon.ico from the public folder (or wherever your favicon is)
 app.use(favicon(path.join(__dirname, 'public', 'favicon.ico')));
@@ -31,6 +42,63 @@ app.get('/api/message', (req, res) => {
 
 // Use the payment routes
 app.use('/api', paymentRoutes);
+
+// Endpoint to receive object and return router details
+app.post('/api/get-router-details', async (req, res) => {
+    try {
+        const { router, command, secret_name } = req.body;  // Destructure the router object from the body
+        
+        if (!router || !router.router_id) {
+            return res.status(400).json({ status: 'error', message: 'Missing router_id in the request body' });
+        }
+
+        // Get router details from the database using the router_id
+        const routerDetails = await getRouterDetails(router.router_id);
+        // console.log("Router Details: ", routerDetails);
+
+        if(routerDetails.ip_address) {
+            executeSSHCommand(routerDetails.ip_address, routerDetails.username, routerDetails.router_secret, secret_name, command)
+            deleteActiveConnection(routerDetails.ip_address, routerDetails.username, routerDetails.router_secret, secret_name)
+        }
+
+        // Return the router details
+        return res.json({ status: 'success', data: routerDetails });
+    } catch (error) {
+        console.error('Error fetching router details:', error);
+        return res.status(500).json({ status: 'error', message: 'Internal Server Error' });
+    }
+});
+
+// Endpoint to change PPPoE plan
+app.post('/api/change-pppoe-plan', async (req, res) => {
+    try {
+        const { secret_name, new_plan, router } = req.body;
+
+        if (!secret_name || !new_plan) {
+            return res.status(400).json({ status: 'error', message: 'Missing required parameters: secret_name and new_plan' });
+        }
+
+        // Log the received parameters
+        console.log(`Received request to change PPPoE plan:`);
+        console.log(`Secret Name: ${secret_name}`);
+        console.log(`New Plan: ${new_plan}`);
+
+        // Respond with success message
+        // 
+
+        const routerDetails = await getRouterDetails(router.router_id);
+        // console.log("Router Details: ", routerDetails);
+
+        if(routerDetails.ip_address) {
+            deleteActiveConnection(routerDetails.ip_address, routerDetails.username, routerDetails.router_secret, secret_name)
+            changePppoePlan(routerDetails.ip_address, routerDetails.username, routerDetails.router_secret, secret_name, new_plan)
+            return res.json({ status: 'success', message: `Received request to change ${secret_name} to plan ${new_plan}` });
+        }
+    } catch (error) {
+        console.error('Error handling request:', error);
+        return res.status(500).json({ status: 'error', message: 'Internal Server Error' });
+    }
+});
 
 
 // Function to check if a row with given CheckoutRequestID exists

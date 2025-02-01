@@ -8,12 +8,12 @@ async function confirmPayment(client_id, MpesaReceiptNumber) {
     try {
         // Fetch client details
         const client = await getClientById(client_id);
-        if (!client) {
+        if (!client.router_id) {
             console.error('Client not found for client_id:', client_id);
             return;
         }
 
-        console.log("Client Details:", client);
+        console.log("Client Router ID:", client.router_id);
 
         // Find payment record
         const [paymentRows] = await pool.execute(
@@ -41,9 +41,10 @@ async function confirmPayment(client_id, MpesaReceiptNumber) {
 
         // Update pppoe_payments using client.company_id
         await pool.execute(
-            'UPDATE pppoe_payments SET company_id = ? WHERE id = ?', 
-            [client.company_id, payment.id]
+            'UPDATE pppoe_payments SET company_id = ?, customer_id = ?, router_id = ?, usedStatus = ? WHERE id = ?', 
+            [client.company_id, client_id, client.router_id, "used", payment.id] // Ensure correct order
         );
+        
         console.log(`Updated pppoe_payments (end_date) for payment ID: ${payment.id}, company_id: ${client.company_id}`);
 
         return newEndDate; // Return the new end date

@@ -1,5 +1,7 @@
 const pool = require('../db'); // Import MySQL connection
 const axios = require('axios');
+const { getRouterDetails, executeSSHCommand } = require('../mikrotik/functions'); 
+
 
 // Function to fetch client details by client_id
 async function getClientById(client_id) {
