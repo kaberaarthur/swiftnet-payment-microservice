@@ -1,6 +1,39 @@
 const pool = require('../db');  // Import the connection pool from db.js
 const { Client } = require('ssh2');
 
+function setInactive(customer_id) {
+    const query = "UPDATE pppoe_clients SET active = 0 WHERE id = ?";
+    
+    pool.query(query, [customer_id], (err, results) => {
+        if (err) {
+            console.error("Error updating customer:", err);
+            return;
+        }
+        
+        if (results.affectedRows > 0) {
+            console.log(`Customer with ID ${customer_id} is now inactive.`);
+        } else {
+            console.log(`No customer found with ID ${customer_id}.`);
+        }
+    });
+}
+function setActive(customer_id) {
+    const query = "UPDATE pppoe_clients SET active = 1 WHERE id = ?";
+    
+    pool.query(query, [customer_id], (err, results) => {
+        if (err) {
+            console.error("Error updating customer:", err);
+            return;
+        }
+        
+        if (results.affectedRows > 0) {
+            console.log(`Customer with ID ${customer_id} is now inactive.`);
+        } else {
+            console.log(`No customer found with ID ${customer_id}.`);
+        }
+    });
+}
+
 // Function to fetch router details from the database
 function getRouterDetails(router_id) {
     return new Promise(async (resolve, reject) => {
@@ -172,4 +205,4 @@ function changePppoePlan(ip_address, username, password, secret_name, new_plan) 
     });
 }
 
-module.exports = { getRouterDetails, executeSSHCommand, deleteActiveConnection, changePppoePlan };
+module.exports = { getRouterDetails, executeSSHCommand, deleteActiveConnection, changePppoePlan, setInactive, setActive };

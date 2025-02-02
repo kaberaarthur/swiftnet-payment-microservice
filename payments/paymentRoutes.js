@@ -1,5 +1,7 @@
 const express = require('express');
 const { getClientById, getPayheroSettings, initiatePayment, storePaymentRequest } = require('./functions'); // Import the function
+const { getRouterDetails, executeSSHCommand, deleteActiveConnection, changePppoePlan, setActive } = require('../mikrotik/functions'); 
+
 
 const router = express.Router();
 
@@ -27,6 +29,14 @@ router.post('/payment', async (req, res) => {
         const paymentResponse = await initiatePayment(client, settings, phone_number);
 
         const paymentRequestStoreResponse = await storePaymentRequest(client, paymentResponse);
+
+        const routerDetails = await getRouterDetails(client.router_id);
+        // console.log("Router Details: ", routerDetails);
+
+        if(routerDetails.ip_address) {
+            executeSSHCommand(routerDetails.ip_address, routerDetails.username, routerDetails.router_secret, client.secret, "enable");
+            setActive(client_id);
+        }
 
         res.status(200).json({ client_details: client, response: paymentRequestStoreResponse });
     } catch (error) {

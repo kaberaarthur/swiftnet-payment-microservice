@@ -4,7 +4,7 @@ const WebSocket = require('ws');
 const favicon = require('serve-favicon');
 const pool = require('./db'); // MySQL connection setup
 const { confirmPayment } = require('./confirmPayment/functions'); 
-const { getRouterDetails, executeSSHCommand, deleteActiveConnection, changePppoePlan } = require('./mikrotik/functions'); 
+const { getRouterDetails, executeSSHCommand, deleteActiveConnection, changePppoePlan, setInactive } = require('./mikrotik/functions'); 
 
 const { Client } = require('ssh2');
 const bodyParser = require('body-parser');
@@ -44,21 +44,22 @@ app.get('/api/message', (req, res) => {
 app.use('/api', paymentRoutes);
 
 // Endpoint to receive object and return router details
-app.post('/api/get-router-details', async (req, res) => {
+app.post('/api/end_subscription', async (req, res) => {
     try {
-        const { router, command, secret_name } = req.body;  // Destructure the router object from the body
+        const { router, command, secret_name, customer_id } = req.body; 
         
-        if (!router || !router.router_id) {
-            return res.status(400).json({ status: 'error', message: 'Missing router_id in the request body' });
+        if (!router) {
+            return res.status(400).json({ status: 'error', message: 'Missing Router in the request body' });
         }
 
         // Get router details from the database using the router_id
-        const routerDetails = await getRouterDetails(router.router_id);
+        const routerDetails = await getRouterDetails(router);
         // console.log("Router Details: ", routerDetails);
 
         if(routerDetails.ip_address) {
             executeSSHCommand(routerDetails.ip_address, routerDetails.username, routerDetails.router_secret, secret_name, command)
             deleteActiveConnection(routerDetails.ip_address, routerDetails.username, routerDetails.router_secret, secret_name)
+            setInactive(customer_id)
         }
 
         // Return the router details
