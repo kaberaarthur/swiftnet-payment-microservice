@@ -15,7 +15,8 @@ const pool = mysql.createPool({
     database: 'swiftnet',
     waitForConnections: true,
     connectionLimit: 10,
-    queueLimit: 0
+    queueLimit: 0,
+    timezone: "+03:00"
 });
 
 module.exports = pool;

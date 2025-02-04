@@ -22,7 +22,7 @@ const path = require('path');
 app.use(bodyParser.json());
 
 // Allow all origins
-app.use(cors({ origin: '*', methods: ['GET', 'POST'] }));
+app.use(cors({ origin: '*', methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE'] }));
 
 // Serve the favicon.ico from the public folder (or wherever your favicon is)
 app.use(favicon(path.join(__dirname, 'public', 'favicon.ico')));
@@ -73,7 +73,7 @@ app.post('/api/end_subscription', async (req, res) => {
 // Endpoint to change PPPoE plan
 app.post('/api/change-pppoe-plan', async (req, res) => {
     try {
-        const { secret_name, new_plan, router } = req.body;
+        const { secret_name, new_plan, router, customer_id } = req.body;
 
         if (!secret_name || !new_plan) {
             return res.status(400).json({ status: 'error', message: 'Missing required parameters: secret_name and new_plan' });
@@ -83,11 +83,13 @@ app.post('/api/change-pppoe-plan', async (req, res) => {
         console.log(`Received request to change PPPoE plan:`);
         console.log(`Secret Name: ${secret_name}`);
         console.log(`New Plan: ${new_plan}`);
+        console.log(`Router ID: ${router}`);
+        console.log(`New Plan: ${customer_id}`);
 
         // Respond with success message
         // 
 
-        const routerDetails = await getRouterDetails(router.router_id);
+        const routerDetails = await getRouterDetails(router);
         // console.log("Router Details: ", routerDetails);
 
         if(routerDetails.ip_address) {
