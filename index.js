@@ -113,51 +113,41 @@ async function checkDatabase(CheckoutRequestID) {
 
 app.post('/watchTransaction', async (req, res) => {
     const { CheckoutRequestID, clientID } = req.body;
+    console.log("CheckoutRequestID - ", CheckoutRequestID);
+    console.log("clientID - ", clientID);
 
     if (!CheckoutRequestID || !clientID) {
         return res.status(400).json({ error: 'Missing required parameters' });
     }
 
-    // Create a new WebSocket connection
-    const socket = new WebSocket('ws://139.59.60.20:3001');
+    let found = false;
+    let elapsedTime = 0;
+    const maxWaitTime = 60000; // 3 minutes (in milliseconds)
+    const checkInterval = 3000; // 3 seconds per check
 
-    // Handle WebSocket connection open event
-    socket.onopen = () => {
-        console.log('Connected to WebSocket');
-        socket.send(JSON.stringify({ CheckoutRequestID, clientID }));
-    };
+    try {
+        while (!found && elapsedTime < maxWaitTime) {
+            const result = await checkDatabase(CheckoutRequestID);
+            if (result) {
+                found = true;
+                // Run a Function to Confirm Payment Here
+                const updatedEndDate = await confirmPayment(clientID, result.MpesaReceiptNumber);
 
-    // Handle WebSocket message event
-    socket.onmessage = async (event) => {
-        try {
-            const response = JSON.parse(event.data);
-
-            if (response.status === 'found' && response.data?.MpesaReceiptNumber) {
-                console.log('Transaction found: ' + response.data.MpesaReceiptNumber);
-
-                // Return response to the client
-                res.json({
-                    status: 'found',
-                    data: response.data,
-                    end_date: response.end_date ? formatFriendlyDate(response.end_date) : null,
-                    mpesaReceipt: response.data.MpesaReceiptNumber,
-                });
-
-                socket.close(); // Close the WebSocket after response
-            } else {
-                console.log('Transaction not found');
-                res.json({ status: 'not_found', message: 'We could not verify your payment.' });
-                socket.close();
+                return res.status(200).json({ status: "found", data: result, end_date: updatedEndDate });
             }
-        } catch (error) {
-            console.error('Error parsing WebSocket message:', error);
-            res.status(500).json({ error: 'Internal server error' });
-            socket.close();
-        }
-    };
 
-    // Handle WebSocket close event
-    socket.onclose = () => console.log('WebSocket connection closed');
+            await new Promise(resolve => setTimeout(resolve, checkInterval));
+            elapsedTime += checkInterval;
+        }
+
+        // If no record found after 3 minutes
+        if (!found) {
+            return res.status(400).json({ status: "not_found", message: "We did not receive your payment. Contact support for help." });
+        }
+    } catch (error) {
+        console.error("Error processing transaction:", error);
+        return res.status(500).json({ error: 'Internal server error' });
+    }
 });
 
 wss.on('connection', (ws) => {
