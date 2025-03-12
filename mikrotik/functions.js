@@ -147,23 +147,29 @@ function executeSSHCommand(ip_address, username, password, secret_name, command)
 
         ssh.on('ready', () => {
             const sshCommand = `/ppp secret set [find name=${secret_name}] disabled=${command === 'disable' ? 'yes' : 'no'}`;
-            // console.log(sshCommand);
+            console.log('Executing SSH Command:', sshCommand);
+            
             ssh.exec(sshCommand, (err, stream) => {
                 if (err) {
-                    reject(`SSH Error: ${err}`);
+                    console.error('SSH Command Execution Error:', err);
+                    reject(`SSH Command Execution Error: ${err}`);
                     ssh.end();
                 } else {
                     let output = '';
                     let error = '';
+                    
                     stream.on('data', (data) => {
                         output += data.toString();
                     });
+                    
                     stream.on('stderr', (data) => {
                         error += data.toString();
                     });
+                    
                     stream.on('close', () => {
                         ssh.end();
                         if (error) {
+                            console.error('SSH Command Error Output:', error);
                             reject({ status: 'error', message: error });
                         } else {
                             resolve({ status: 'success', message: `PPP Secret '${secret_name}' ${command}d successfully.` });
@@ -172,6 +178,7 @@ function executeSSHCommand(ip_address, username, password, secret_name, command)
                 }
             });
         }).on('error', (err) => {
+            console.error('SSH Connection Failed:', err);
             reject(`SSH Connection Failed: ${err}`);
         }).connect({
             host: ip_address,
@@ -181,6 +188,7 @@ function executeSSHCommand(ip_address, username, password, secret_name, command)
         });
     });
 }
+
 
 function deleteActiveConnection(ip_address, username, password, secret_name) {
     return new Promise((resolve, reject) => {
