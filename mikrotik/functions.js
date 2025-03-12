@@ -99,7 +99,7 @@ function setInactive(customer_id) {
 }
 
 function setActive(customer_id) {
-    const query = "UPDATE pppoe_clients SET active = 1 WHERE id = ?";
+    const query = "UPDATE pppoe_clients SET active = 1, reminder = 1 WHERE id = ?";
     
     pool.query(query, [customer_id], (err, results) => {
         if (err) {
