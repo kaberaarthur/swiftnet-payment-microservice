@@ -25,77 +25,75 @@ function getClientDetails(customer_id, callback) {
     });
 }
 
-function setInactive(customer_id) {
+async function setInactive(customer_id) {
+    console.log("Client ID: ", customer_id);
+
     const getClientQuery = `
         SELECT full_name, phone_number, router_id, company_username, location 
         FROM pppoe_clients 
         WHERE id = ?
     `;
+
+    const [clientResults] = await pool.execute(getClientQuery, [customer_id]);
+
+    // Proceed with update if client exists
+    if (clientResults.length > 0) {
+        const client = clientResults[0];
+        const updateQuery = "UPDATE pppoe_clients SET active = 0 WHERE id = ?";
+        
+        pool.query(updateQuery, [customer_id], (err, updateResults) => {
+            if (err) {
+                console.error("Error updating customer's active status:", err);
+                return;
+            }
+
+            if (updateResults.affectedRows > 0) {
+                console.log(`Customer with ID ${customer_id} is now inactive.`);
+
+                // Construct the log description
+                const description = `System set the user ${client.full_name} of ${client.phone_number} to inactive`;
+                
+                // Insert into local_logs
+                const logQuery = `
+                    INSERT INTO local_logs (
+                        user_type, 
+                        ip_address, 
+                        description, 
+                        company_id, 
+                        company_username, 
+                        user_id, 
+                        name, 
+                        router_id
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                `;
+                
+                // Sample values - adjust these based on your actual context
+                const logValues = [
+                    'system',                  // user_type
+                    '127.0.0.1',              // ip_address (you might want to pass this as parameter)
+                    description,              // description
+                    2,                       // company_id (adjust as needed)
+                    client.company_username,  // company_username
+                    customer_id,             // user_id
+                    client.full_name,        // name
+                    client.router_id         // router_id
+                ];
+
+                pool.query(logQuery, logValues, (err, logResults) => {
+                    if (err) {
+                        console.error("Error creating log entry:", err);
+                        return;
+                    }
+                    console.log("Log entry created successfully");
+                });
+            } else {
+                console.log(`No customer found with ID ${customer_id}.`);
+            }
+        });
+    } else {
+        console.log(`No client found with ID ${customer_id} to set inactive`);
+    }
     
-    pool.query(getClientQuery, [customer_id], (err, clientResults) => {
-        if (err) {
-            console.error("Error fetching client details:", err);
-            return;
-        }
-
-        // Proceed with update if client exists
-        if (clientResults.length > 0) {
-            const client = clientResults[0];
-            const updateQuery = "UPDATE pppoe_clients SET active = 0 WHERE id = ?";
-            
-            pool.query(updateQuery, [customer_id], (err, updateResults) => {
-                if (err) {
-                    console.error("Error updating customer:", err);
-                    return;
-                }
-
-                if (updateResults.affectedRows > 0) {
-                    console.log(`Customer with ID ${customer_id} is now inactive.`);
-
-                    // Construct the log description
-                    const description = `System set the user ${client.full_name} of ${client.phone_number} to inactive`;
-                    
-                    // Insert into local_logs
-                    const logQuery = `
-                        INSERT INTO local_logs (
-                            user_type, 
-                            ip_address, 
-                            description, 
-                            company_id, 
-                            company_username, 
-                            user_id, 
-                            name, 
-                            router_id
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                    `;
-                    
-                    // Sample values - adjust these based on your actual context
-                    const logValues = [
-                        'system',                  // user_type
-                        '127.0.0.1',              // ip_address (you might want to pass this as parameter)
-                        description,              // description
-                        2,                       // company_id (adjust as needed)
-                        client.company_username,  // company_username
-                        customer_id,             // user_id
-                        client.full_name,        // name
-                        client.router_id         // router_id
-                    ];
-
-                    pool.query(logQuery, logValues, (err, logResults) => {
-                        if (err) {
-                            console.error("Error creating log entry:", err);
-                            return;
-                        }
-                        console.log("Log entry created successfully");
-                    });
-                } else {
-                    console.log(`No customer found with ID ${customer_id}.`);
-                }
-            });
-        } else {
-            console.log(`No client found with ID ${customer_id} to set inactive`);
-        }
-    });
 }
 
 function setActive(customer_id) {
