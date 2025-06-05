@@ -1,5 +1,7 @@
+const moment = require("moment-timezone");
 const { getClientById } = require('../payments/functions'); 
 const pool = require('../db'); // Import MySQL connection
+
 
 async function confirmPayment(client_id, MpesaReceiptNumber) {
     console.log("Mpesa Receipt Number:", MpesaReceiptNumber);
@@ -30,12 +32,21 @@ async function confirmPayment(client_id, MpesaReceiptNumber) {
         // console.log('Payment Record:', payment);
 
         // Update pppoe_clients: set installation_fee = 0 and update end_date
-        const newEndDate = new Date(client.end_date < Date.now() ? Date.now() : client.end_date);
-        newEndDate.setMonth(newEndDate.getMonth() + 1);
+        const nowNairobi = moment.tz("Africa/Nairobi");
+        const clientEndDateNairobi = moment.tz(client.end_date, "Africa/Nairobi");
+
+        // Use current time if end_date expired, else use end_date
+        const baseDate = clientEndDateNairobi.isBefore(nowNairobi) ? nowNairobi : clientEndDateNairobi;
+
+        // Add one month
+        const newEndDate = baseDate.clone().add(1, "month");
+
+        // Format as YYYY-MM-DD HH:mm:ss
+        const formattedNewEndDate = newEndDate.format("YYYY-MM-DD HH:mm:ss");
 
         await pool.execute(
             'UPDATE pppoe_clients SET installation_fee = 0, end_date = ? WHERE id = ?', 
-            [newEndDate, client_id]
+            [formattedNewEndDate, client_id]
         );
         console.log(`Updated pppoe_clients (installation_fee & end_date) for client_id: ${client_id}`);
 
