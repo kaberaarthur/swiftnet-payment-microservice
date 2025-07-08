@@ -4,7 +4,7 @@ const WebSocket = require('ws');
 const favicon = require('serve-favicon');
 const pool = require('./db'); // MySQL connection setup
 const { confirmPayment } = require('./confirmPayment/functions'); 
-const { getRouterDetails, executeSSHCommand, deleteActiveConnection, changePppoePlan, setInactive } = require('./mikrotik/functions'); 
+const { getRouterDetails, executeSSHCommand, deleteActiveConnection, changePppoePlan, setInactive, setActive } = require('./mikrotik/functions'); 
 
 const { Client } = require('ssh2');
 const bodyParser = require('body-parser');
@@ -59,7 +59,13 @@ app.post('/api/end_subscription', async (req, res) => {
         if(routerDetails.ip_address) {
             executeSSHCommand(routerDetails.ip_address, routerDetails.username, routerDetails.router_secret, secret_name, command)
             deleteActiveConnection(routerDetails.ip_address, routerDetails.username, routerDetails.router_secret, secret_name)
-            setInactive(customer_id)
+            
+            // Conditional logic for command
+            if (command === 'enable') {
+                setActive(customer_id);
+            } else if (command === 'disable') {
+                setInactive(customer_id);
+            }
         }
 
         // Return the router details
