@@ -195,13 +195,10 @@ function deleteActiveConnection(ip_address, username, password, secret_name) {
         conn.on('ready', () => {
             console.log('SSH Connection Established');
 
-            // Combine PPPoE removal with your extra bridge/ARP command
+            // MikroTik command to find and remove the active PPPoE session
             const command = `
                 /ppp active remove [find name=${secret_name}];
                 /ip arp remove [find dynamic=yes];
-                /interface bridge disable [find];
-                delay 1;
-                /interface bridge enable [find]
             `;
 
             conn.exec(command, (err, stream) => {
@@ -226,7 +223,7 @@ function deleteActiveConnection(ip_address, username, password, secret_name) {
                     if (error) {
                         reject({ status: 'error', message: error.trim() });
                     } else {
-                        resolve({ status: 'success', message: `Active PPPoE session '${secret_name}' removed and bridge/ARP reset completed.` });
+                        resolve({ status: 'success', message: `Active PPPoE session '${secret_name}' removed.` });
                     }
                 });
             });
