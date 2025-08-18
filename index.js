@@ -56,15 +56,16 @@ app.post('/api/end_subscription', async (req, res) => {
         const routerDetails = await getRouterDetails(router);
         // console.log("Router Details: ", routerDetails);
 
+        
         if(routerDetails.ip_address) {
-            executeSSHCommand(routerDetails.ip_address, routerDetails.username, routerDetails.router_secret, secret_name, command)
-            deleteActiveConnection(routerDetails.ip_address, routerDetails.username, routerDetails.router_secret, secret_name)
+            await executeSSHCommand(routerDetails.ip_address, routerDetails.username, routerDetails.router_secret, secret_name, command);
             
             // Conditional logic for command
             if (command === 'enable') {
-                setActive(customer_id);
+                await setActive(customer_id);
             } else if (command === 'disable') {
-                setInactive(customer_id);
+                await deleteActiveConnection(routerDetails.ip_address, routerDetails.username, routerDetails.router_secret, secret_name);
+                await setInactive(customer_id);
             }
         }
 
