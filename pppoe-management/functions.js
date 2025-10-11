@@ -33,7 +33,7 @@ async function fetchExpiredPPPoEClients() {
 
 async function fetchClientsByRouter(router_id) {
     try {
-        const currentDate = moment().tz('Africa/Nairobi').format('YYYY-MM-DD');
+        const currentDate = moment().tz('Africa/Nairobi').format('YYYY-MM-DD HH:mm:ss');
         const [rows] = await pool.execute(`
             SELECT pc.id, pc.secret, pc.phone_number, pc.active, pc.reminder, pc.router_id, pc.full_name, pc.end_date, pc.company_username, pc.plan_fee
             FROM pppoe_clients pc 
