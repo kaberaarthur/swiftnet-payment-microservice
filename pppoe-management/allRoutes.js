@@ -6,7 +6,8 @@ const {
     fetchClientsByRouter, 
     sendSMS,
     fetchClientsNearExpiry,
-    sendReminders
+    sendReminders,
+    sendWhatsappReminders,
 } = require('./functions');
 
 const router = express.Router();
@@ -27,6 +28,17 @@ router.get('/expired/:router_id', async (req, res) => {
     const { router_id } = req.params;
     try {
         const clients = await fetchClientsByRouter(router_id);
+        res.json(clients);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Failed to fetch clients for the specified router' });
+    }
+});
+
+// Fetch clients near expiry
+router.get('/near-expiry', async (req, res) => {
+    try {
+        const clients = await fetchClientsNearExpiry();
         res.json(clients);
     } catch (error) {
         console.error(error);

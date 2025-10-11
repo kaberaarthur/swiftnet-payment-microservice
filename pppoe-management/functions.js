@@ -1,6 +1,8 @@
 const moment = require("moment-timezone");
 const pool = require('../db');
 const path = require('path');
+const axios = require('axios');
+
 require("dotenv").config({ path: path.join(__dirname, '..', '.env') });
 
 async function fetchRouters() {
@@ -216,4 +218,120 @@ async function sendReminders(near_expiry_users) {
   return results;
 }
 
-module.exports = { fetchRouters, fetchExpiredPPPoEClients, fetchClientsByRouter, sendSMS, fetchClientsNearExpiry, sendReminders };
+async function sendWhatsappReminders(near_expiry_users) {
+  console.log("Sending WhatsApp messages to the following users:", near_expiry_users.length);
+
+  const results = {
+    total: near_expiry_users.length,
+    successful: 0,
+    failed: 0,
+    errors: [],
+    details: []
+  };
+
+  for (const client of near_expiry_users) {
+    // Format phone number
+    let formattedPhone = client.phone_number;
+    
+    // Remove any extra characters after the phone number (like /t, spaces, etc.)
+    formattedPhone = formattedPhone.split(/[\/\s\t]/)[0].trim();
+
+    // If it starts with '00', remove only one leading zero (e.g., 0079... -> 079...)
+    if (formattedPhone.startsWith('00')) {
+      formattedPhone = formattedPhone.substring(1);
+    }
+    
+    // Convert 0790485731 format to +254790485731
+    if (formattedPhone.startsWith('0') && formattedPhone.length === 10) {
+      formattedPhone = '+254' + formattedPhone.substring(1);
+    }
+    
+    // Format end date to human-friendly format (e.g., "12th Oct")
+    const endDate = moment(client.end_date).tz('Africa/Nairobi');
+    const day = endDate.date();
+    const month = endDate.format('MMM');
+    
+    // Add ordinal suffix (st, nd, rd, th)
+    const getOrdinalSuffix = (day) => {
+      if (day > 3 && day < 21) return 'th';
+      switch (day % 10) {
+        case 1: return 'st';
+        case 2: return 'nd';
+        case 3: return 'rd';
+        default: return 'th';
+      }
+    };
+    
+    const formattedDate = `${day}${getOrdinalSuffix(day)} ${month}`;
+
+    const message = `Hello ${client.company_username} client,\n\n` +
+      `Your home fiber subscription expires on ${formattedDate}.\n\n` +
+      `To avoid disruption, kindly renew your subscription by paying ${client.plan_fee} ` +
+      `to Paybill No. 4150219 and Account No. ${client.id}. Make sure you enter the CORRECT ACCOUNT NUMBER.`;
+
+    const payload = {
+      phoneNumber: formattedPhone,
+      message: message,
+      type: 'text'
+    };
+
+    console.log("Payload: ", payload);
+
+    const headers = {
+      Authorization: `Bearer ${process.env.API_WAP_API_KEY}`,
+      'Content-Type': 'application/json'
+    };
+
+    try {
+      const response = await axios.post(
+        'https://api.apiwap.com/api/v1/whatsapp/send-message',
+        payload,
+        { headers }
+      );
+
+      console.log(`✅ WhatsApp message sent to ${formattedPhone}:`, response.data);
+
+      results.successful++;
+      results.details.push({
+        clientId: client.id,
+        phone: formattedPhone,
+        username: client.company_username,
+        status: 'success',
+        response: response.data
+      });
+
+    } catch (error) {
+      console.error(`❌ Error sending WhatsApp message to ${formattedPhone}:`, error.message);
+      
+      results.failed++;
+      results.errors.push({
+        clientId: client.id,
+        phone: formattedPhone,
+        username: client.company_username,
+        error: error.message
+      });
+      results.details.push({
+        clientId: client.id,
+        phone: formattedPhone,
+        username: client.company_username,
+        status: 'failed',
+        error: error.message
+      });
+    }
+  }
+
+  console.log("✅ All WhatsApp messages processed.");
+  console.log(`📊 Summary: ${results.successful} successful, ${results.failed} failed out of ${results.total} total`);
+  
+  return results;
+}
+
+module.exports = { 
+  fetchRouters, 
+  fetchExpiredPPPoEClients, 
+  fetchClientsByRouter, 
+  sendSMS, 
+  fetchClientsNearExpiry, 
+  sendReminders,
+  sendWhatsappReminders,
+};
