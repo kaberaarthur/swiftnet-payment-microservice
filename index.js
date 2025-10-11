@@ -15,6 +15,7 @@ const wss = new WebSocket.Server({ server });
 
 // External Endpoints
 const paymentRoutes = require('./payments/paymentRoutes');
+const pppoeManagementRoutes = require('./pppoe-management/allRoutes');
 
 const path = require('path');
 
@@ -43,7 +44,11 @@ app.get('/api/message', (req, res) => {
 // Use the payment routes
 app.use('/api', paymentRoutes);
 
+// Use the pppoe management routes
+app.use('/api', pppoeManagementRoutes);
+
 // Endpoint to receive object and return router details
+// This endpoint does both activations and deactivations
 app.post('/api/end_subscription', async (req, res) => {
     try {
         const { router, command, secret_name, customer_id } = req.body; 

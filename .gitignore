@@ -45,3 +45,6 @@ Thumbs.db
 # Debugging
 coverage/
 *.lcov
+
+# Notes
+Notes.txt
