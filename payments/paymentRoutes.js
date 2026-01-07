@@ -34,7 +34,7 @@ router.post('/payment', async (req, res) => {
         // console.log("Router Details: ", routerDetails);
 
         if(routerDetails.ip_address) {
-            executeSSHCommand(routerDetails.ip_address, routerDetails.username, routerDetails.router_secret, client.secret, "enable");
+            executeSSHCommand(routerDetails.ip_address, routerDetails.username, routerDetails.router_secret, client.secret, "enable", routerDetails.port);
             setActive(client_id);
         }
 
@@ -72,7 +72,7 @@ router.post('/enable-client', async (req, res) => {
         }
 
         console.log("Executing SSH Command...");
-        await executeSSHCommand(routerDetails.ip_address, routerDetails.username, routerDetails.router_secret, client.secret, "enable");
+        await executeSSHCommand(routerDetails.ip_address, routerDetails.username, routerDetails.router_secret, client.secret, "enable", routerDetails.port);
 
         console.log("Setting client as active...");
         await setActive(client_id);
