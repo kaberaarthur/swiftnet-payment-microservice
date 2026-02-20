@@ -1,7 +1,7 @@
 const mysql = require('mysql2/promise');
 const os = require('os');
 
-// Get the server's IP address
+// Server's IP address
 const serverIP = os.networkInterfaces()['eth0']?.find(interface => interface.family === 'IPv4')?.address || 'localhost';
 
 // Determine which host to use
