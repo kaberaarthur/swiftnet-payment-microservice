@@ -5,13 +5,13 @@ const os = require('os');
 const serverIP = os.networkInterfaces()['eth0']?.find(interface => interface.family === 'IPv4')?.address || 'localhost';
 
 // Determine which host to use
-const host = (serverIP === '139.59.60.20') ? 'localhost' : '139.59.60.20';
+const host = (serverIP === '63.250.41.172') ? 'localhost' : '63.250.41.172';
 
 // MySQL connection setup
 const pool = mysql.createPool({
     host: host,  // Dynamically set the host based on the server IP
     user: 'swiftnet',
-    password: 'nOIqSz3aGgYM9z7J',
+    password: 'qa0odOWFVvdV90E9',
     database: 'swiftnet',
     waitForConnections: true,
     connectionLimit: 10,
