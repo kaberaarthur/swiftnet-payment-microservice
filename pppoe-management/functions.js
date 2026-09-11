@@ -94,17 +94,20 @@ async function sendSMS(expired_users) {
 // Fetch Clients to Send Reminders
 async function fetchClientsNearExpiry() {
     try {
-        const currentDate = moment().tz('Africa/Nairobi').format('YYYY-MM-DD');
-        const fiveDaysFromNow = moment().tz('Africa/Nairobi').add(5, 'days').format('YYYY-MM-DD');
-        const oneDayFromNow = moment().tz('Africa/Nairobi').add(1, 'day').format('YYYY-MM-DD');
-        
+        // Match exactly the day that is 2 days before expiry - a single calendar day,
+        // not a range. This cron runs once a day, so a multi-day window (previously
+        // 1-5 days out) meant the same client matched on every one of those days and
+        // got reminded repeatedly as their expiry approached. Matching one exact day
+        // means each client is only ever picked up once per billing cycle.
+        const reminderDate = moment().tz('Africa/Nairobi').add(2, 'days').format('YYYY-MM-DD');
+
         const [rows] = await pool.execute(`
             SELECT pc.id, pc.phone_number, pc.company_username, pc.end_date, pc.plan_fee
-            FROM pppoe_clients pc 
-            INNER JOIN routers r ON pc.router_id = r.id 
-            WHERE pc.end_date >= ? AND pc.end_date <= ? AND r.status = 1 AND pc.active = 1
-        `, [oneDayFromNow, fiveDaysFromNow]);
-        
+            FROM pppoe_clients pc
+            INNER JOIN routers r ON pc.router_id = r.id
+            WHERE DATE(pc.end_date) = ? AND r.status = 1 AND pc.active = 1 AND pc.reminder = 1
+        `, [reminderDate]);
+
         return rows;
     } catch (error) {
         console.error('Error fetching clients near expiry:', error);
